@@ -1,4 +1,11 @@
 const express = require("express");
+
+const cron = require('node-cron');
+const mysqldump = require('mysqldump');
+
+const Discord = require('discord-webhook-node');
+const webhook = new Discord.Webhook("https://discord.com/api/webhooks/1235160890446450699/YDxQGlGP1NwekH9rDgDDbOj3ld97J2tmrWX917rPsITHP6rlrsoChnjGbJ-H60ZFA66D");
+
 const app = express();
 const port = 6969;
 const bodyParser = require("body-parser");
@@ -300,6 +307,37 @@ app.put("/update-data/product/:kode/:qty", validateKey, async (req, res) => {
       console.log("Error update data : ", eror);
     });
 });
+
+cron.schedule('47 16 * * *', async () => {
+  console.log('Starting backup process...');
+  const date = new Date();
+  const path = "src/backup";
+  const filename = `backup_${date.getFullYear()}-${date.getMonth()}-${date.getDate()}-${date.getHours()}-${date.getMinutes()}.sql`;
+
+  try {
+    // Lakukan backup MySQL
+    await mysqldump({
+      connection: {
+        host: "localhost",
+        user: "root",
+        password: "",
+        database: "cashier"
+      },
+      dumpToFile: `${path}/${filename}`
+    });
+
+    console.log('Backup successfully created at', `${path}/${filename}`);
+
+    // Kirim file ke Discord menggunakan webhook
+    await webhook.sendFile(`${path}/${filename}`);
+
+    console.log('Backup file sent to Discord');
+
+  } catch (error) {
+    console.error('An error occurred while creating backup', error);
+  }
+});
+
 
 app.listen(port, () => {
   console.clear();

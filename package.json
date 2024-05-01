@@ -10,8 +10,12 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "discord-webhook-node": "^1.1.8",
     "express": "^4.19.2",
     "mysql": "^2.18.1",
+    "mysqldump": "^3.2.0",
+    "node-cmd": "^5.0.0",
+    "node-cron": "^3.0.3",
     "nodemon": "^3.1.0"
   }
 }

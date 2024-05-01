@@ -1,0 +1,2 @@
+jangan lupa
+Npm i

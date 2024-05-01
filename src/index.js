@@ -9,7 +9,8 @@ const apiKey = "Cokrok-kasir-apikey-098979";
 app.use(bodyParser.json());
 
 function validateKey(req, res, next) {
-  //middleare validasi data
+  //middleare validasi apikey
+
   if (!req.header("api-key")) {
     return response(500, "You missing header!!", "Validation Error", res);
   }

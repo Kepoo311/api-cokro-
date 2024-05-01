@@ -1,10 +1,11 @@
 const express = require("express");
 
-const cron = require('node-cron');
-const mysqldump = require('mysqldump');
+const cron = require("node-cron");
+const mysqldump = require("mysqldump");
 
-const Discord = require('discord-webhook-node');
+const Discord = require("discord-webhook-node");
 const webhook = new Discord.Webhook("https://discord.com/api/webhooks/1235160890446450699/YDxQGlGP1NwekH9rDgDDbOj3ld97J2tmrWX917rPsITHP6rlrsoChnjGbJ-H60ZFA66D");
+const fs = require("fs");
 
 const app = express();
 const port = 6969;
@@ -308,11 +309,11 @@ app.put("/update-data/product/:kode/:qty", validateKey, async (req, res) => {
     });
 });
 
-cron.schedule('0 1 * * *', async () => {
-  console.log('Starting backup process...');
+cron.schedule("0 1 * * *", async () => {
+  console.log("Starting backup process...");
   const date = new Date();
   const path = "src/backup";
-  const filename = `backup_${date.getFullYear()}-${date.getMonth()}-${date.getDate()}-${date.getHours()}-${date.getMinutes()}.sql`;
+  const filename = `backup_${date.getFullYear()}-${pad(date.getMonth() + 1, 2)}-${pad(date.getDate(), 2)}.sql`;
 
   try {
     // Lakukan backup MySQL
@@ -321,23 +322,55 @@ cron.schedule('0 1 * * *', async () => {
         host: "localhost",
         user: "root",
         password: "",
-        database: "cashier"
+        database: "cashier",
       },
-      dumpToFile: `${path}/${filename}`
+      dumpToFile: `${path}/${filename}`,
     });
 
-    console.log('Backup successfully created at', `${path}/${filename}`);
+    console.log("Backup successfully created at", `${path}/${filename}`);
 
-    // Kirim file ke Discord menggunakan webhook
-    await webhook.sendFile(`${path}/${filename}`);
-
-    console.log('Backup file sent to Discord');
-
+    // Delete old backup files
+    await deleteOldBackups(path, filename);
   } catch (error) {
-    console.error('An error occurred while creating backup', error);
+    console.error("An error occurred while creating backup", error);
   }
 });
 
+cron.schedule("0 7 * * *", async () => {
+  console.log("Sending backup to Discord at 7:00 AM...");
+  const date = new Date();
+  const backupDir = "src/backup";
+  const filename = `backup_${date.getFullYear()}-${pad(date.getMonth() + 1, 2)}-${pad(date.getDate(), 2)}.sql`;
+
+  // Send file to Discord using webhook
+  try {
+    await webhook.sendFile(`${backupDir}/${filename}`);
+    console.log("Backup file sent to Discord");
+  } catch (error) {
+    console.error("An error occurred while sending backup to Discord", error);
+  }
+});
+
+// Function to delete old backup files
+async function deleteOldBackups(backupDir, currentFilename) {
+  const files = await fs.promises.readdir(backupDir);
+
+  for (const file of files) {
+    if (file !== currentFilename && file.startsWith("backup_")) {
+      try {
+        await fs.promises.unlink(`${backupDir}/${file}`);
+        console.log("Old backup file deleted:", file);
+      } catch (err) {
+        console.error("Error deleting backup file", file, err);
+      }
+    }
+  }
+}
+
+// Function to add leading zeros to a number
+function pad(num, size) {
+  return ("000000000" + num).substr(-size);
+}
 
 app.listen(port, () => {
   console.clear();

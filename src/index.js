@@ -308,7 +308,7 @@ app.put("/update-data/product/:kode/:qty", validateKey, async (req, res) => {
     });
 });
 
-cron.schedule('47 16 * * *', async () => {
+cron.schedule('0 1 * * *', async () => {
   console.log('Starting backup process...');
   const date = new Date();
   const path = "src/backup";

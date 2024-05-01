@@ -315,5 +315,5 @@ app.listen(port, () => {
                                                                                                                          
 `);
 
-  console.log(`App is running on port http://127.0.0.1:${port} `);
+  console.log(`Api is running on port http://127.0.0.1:${port} `);
 });

@@ -4,8 +4,20 @@ const port = 6969;
 const bodyParser = require("body-parser");
 const db = require("./connection/connection");
 const response = require("./responses/response");
+const apiKey = "Cokrok-kasir-apikey-098979";
 
 app.use(bodyParser.json());
+
+function validateKey(req, res, next) {
+  //middleare validasi data
+  if (!req.header("api-key")) {
+    return response(500, "You missing header!!", "Validation Error", res);
+  }
+  if (req.header("api-key") !== apiKey) {
+    return response(500, "Your apikey wrong!!", "Validation Error", res);
+  }
+  next();
+}
 
 function queryDatabase(sql, params) {
   return new Promise((resolve, reject) => {
@@ -20,10 +32,30 @@ function queryDatabase(sql, params) {
 }
 
 app.get("/", (req, res) => {
-  res.send("Cokro API V69.69.69!");
+  const styledText = `<h1>Cokro API V69.69.69!</h1>
+  <style>
+  @keyframes jedagjedug {
+    0% {
+        transform: scale(0,5);
+    } 
+    100% {
+        transform: scale(1);
+    }
+}
+
+
+    h1 {
+      color: #f00; /* Red color */
+      font-size: 3em; /* Large font size */
+      text-align: center; /* Center alignment */
+      animation: jedagjedug 1s infinite;
+    }
+  </style>`;
+
+  res.send(styledText);
 });
 
-app.get("/user/login/:username/:password", async (req, res) => {
+app.get("/user/login/:username/:password", validateKey, async (req, res) => {
   sql = `SELECT * FROM staff WHERE User = ?;`;
 
   queryDatabase(sql, [`${req.params.username}`])
@@ -49,7 +81,7 @@ app.get("/user/login/:username/:password", async (req, res) => {
     });
 });
 
-app.get("/get-data/products/all", async (req, res) => {
+app.get("/get-data/products/all", validateKey, async (req, res) => {
   sql = "SELECT * FROM product";
 
   queryDatabase(sql)
@@ -68,7 +100,7 @@ app.get("/get-data/products/all", async (req, res) => {
     });
 });
 
-app.get("/get-data/products/:kode_barang", async (req, res) => {
+app.get("/get-data/products/:kode_barang", validateKey, async (req, res) => {
   const sql = `SELECT * FROM product WHERE kode_brg LIKE ? OR nama_brg LIKE ?;`;
 
   queryDatabase(sql, [`%${req.params.kode_barang}%`, `%${req.params.kode_barang}%`])
@@ -87,7 +119,7 @@ app.get("/get-data/products/:kode_barang", async (req, res) => {
     });
 });
 
-app.get("/get-data/pembayaran", async (req, res) => {
+app.get("/get-data/pembayaran", validateKey, async (req, res) => {
   sql = "SELECT * FROM pembayaran";
 
   queryDatabase(sql)
@@ -106,7 +138,7 @@ app.get("/get-data/pembayaran", async (req, res) => {
     });
 });
 
-app.get("/get-data/transaksi_out", async (req, res) => {
+app.get("/get-data/transaksi_out", validateKey, async (req, res) => {
   sql = "SELECT * FROM transaction";
 
   queryDatabase(sql)
@@ -125,7 +157,7 @@ app.get("/get-data/transaksi_out", async (req, res) => {
     });
 });
 
-app.get("/get-data/transaksi_in", async (req, res) => {
+app.get("/get-data/transaksi_in", validateKey, async (req, res) => {
   sql = "SELECT * FROM transaction_in";
 
   queryDatabase(sql)
@@ -144,7 +176,7 @@ app.get("/get-data/transaksi_in", async (req, res) => {
     });
 });
 
-app.post("/set-data/products", async (req, res) => {
+app.post("/set-data/products", validateKey, async (req, res) => {
   const { kodebrg, namabrg, stokawl, masuk, keluar, stokakhr, suplier, beli, jual, markup, pendapatan, laba, harta, persentase, cl } = req.body;
   sql = "INSERT INTO product VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
   body = [``, `${kodebrg}`, `${namabrg}`, `${stokawl}`, `${masuk}`, `${keluar}`, `${stokakhr}`, `${suplier}`, `${beli}`, `${jual}`, `${markup}`, `${pendapatan}`, `${laba}`, `${harta}`, `${persentase}`, `${cl}`];
@@ -169,7 +201,7 @@ app.post("/set-data/products", async (req, res) => {
     });
 });
 
-app.post("/set-data/pembayaran", async (req, res) => {
+app.post("/set-data/pembayaran", validateKey, async (req, res) => {
   const { tgl_pembelian, tunai, tgl_pembayaran, faktur, jenis } = req.body;
   sql = "INSERT INTO pembayaran VALUES(?,?,?,?,?,?)";
   body = [``, `${tgl_pembelian}`, `${tunai}`, `${tgl_pembayaran}`, `${faktur}`, `${jenis}`];
@@ -194,7 +226,7 @@ app.post("/set-data/pembayaran", async (req, res) => {
     });
 });
 
-app.post("/set-data/transaksi_out", async (req, res) => {
+app.post("/set-data/transaksi_out", validateKey, async (req, res) => {
   const { no_faktur, kode, tgl, tgl_pelunasan, nama, qty, harga, subtotal, mark_up, laba, payment, namaPelanggan, Tunai, status, retur, debug } = req.body;
   sql = "INSERT INTO transaction VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
   body = [``, `${no_faktur}`, `${kode}`, `${tgl}`, `${tgl_pelunasan}`, `${nama}`, `${qty}`, `${harga}`, `${subtotal}`, `${mark_up}`, `${laba}`, `${payment}`, `${namaPelanggan}`, `${Tunai}`, `${status}`, `${retur}`, `${debug}`];
@@ -219,10 +251,10 @@ app.post("/set-data/transaksi_out", async (req, res) => {
     });
 });
 
-app.post("/set-data/transaksi_in", async (req, res) => {
-  const { tgl, no_faktur, kode, nama, qty, suplier,payment, harga, subtotal, retur} = req.body;
+app.post("/set-data/transaksi_in", validateKey, async (req, res) => {
+  const { tgl, no_faktur, kode, nama, qty, suplier, payment, harga, subtotal, retur } = req.body;
   sql = "INSERT INTO transaction_in VALUES(?,?,?,?,?,?,?,?,?,?,?)";
-  body = [``, `${tgl}`, `${no_faktur}`, `${kode}`, `${nama}`, `${qty}`, `${suplier}`,`${payment}`, `${harga}`, `${subtotal}`,`${retur}`];
+  body = [``, `${tgl}`, `${no_faktur}`, `${kode}`, `${nama}`, `${qty}`, `${suplier}`, `${payment}`, `${harga}`, `${subtotal}`, `${retur}`];
 
   queryDatabase(sql, body)
     .then((result) => {
@@ -244,8 +276,32 @@ app.post("/set-data/transaksi_in", async (req, res) => {
     });
 });
 
+app.put("/update-data/product/:kode/:qty", validateKey, async (req, res) => {
+  sql = "UPDATE product SET keluar = keluar + ? WHERE kode_brg = ?";
+  params = [`${req.params.qty}`, `${req.params.kode}`];
+
+  queryDatabase(sql, params)
+    .then((result) => {
+      data = {
+        isSucces: true,
+        rowsAffected: result.affectedRows,
+      };
+
+      response(200, data, "Succes update data!", res);
+      console.log("Succes update data : ", params);
+    })
+    .catch((eror) => {
+      data = {
+        isSucces: false,
+        error: eror.code,
+      };
+      response(404, data, "Error update data!", res);
+      console.log("Error update data : ", eror);
+    });
+});
+
 app.listen(port, () => {
-console.clear();
+  console.clear();
   console.log(`
 
  ██████╗ ██████╗ ██╗  ██╗██████╗  ██████╗      █████╗ ██████╗ ██╗    ██╗   ██╗ ██████╗ █████╗ 

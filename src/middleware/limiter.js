@@ -6,6 +6,9 @@ const rateLimitMiddleware = setRateLimit({
   max: 30,
   message: "Kamu telah melampaui maximal request.",
   headers: true,
+  keyGenerator: function (req /*, res*/) {
+    return req.ip;  // Use only IP address for limiting
+  }
 });
 
 module.exports = rateLimitMiddleware;

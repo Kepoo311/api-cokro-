@@ -1,2 +1,2 @@
 @echo off
-start cmd /k "npm run fire"
+start cmd /k "npm run dev"

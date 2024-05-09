@@ -101,9 +101,9 @@ app.get("/get-data/products/all", async (req, res) => {
 });
 
 app.get("/get-data/products/:kode_barang", async (req, res) => {
-  const sql = `SELECT * FROM product WHERE kode_brg LIKE ? OR nama_brg LIKE ?;`;
+  const sql = `SELECT * FROM product WHERE kode_brg = ? OR nama_brg LIKE ?;`;
 
-  queryDatabase(sql, [`%${req.params.kode_barang}%`, `%${req.params.kode_barang}%`])
+  queryDatabase(sql, [`${req.params.kode_barang}`, `%${req.params.kode_barang}%`])
     .then((result) => {
       if (!result || result.length === 0) {
         console.error("No data found : ", req.params.kode_barang);
@@ -118,6 +118,7 @@ app.get("/get-data/products/:kode_barang", async (req, res) => {
       console.error("Error fetching data: ", error);
     });
 });
+
 
 app.get("/get-data/pembayaran", async (req, res) => {
   sql = "SELECT * FROM pembayaran";
@@ -167,6 +168,19 @@ app.get("/get-data/transaksi_in", async (req, res) => {
         return response(404, null, "No data found", res);
       }
 
+      response(200, result, "Success fetch data", res);
+      console.log("Data fetched successfully: ", sql);
+    })
+    .catch((error) => {
+      response(404, null, "Error fetching data", res);
+      console.error("Error fetching data: ", error);
+    });
+});
+
+app.get("/get-data/no_faktur", async (req, res) => {
+  const sql = `SELECT MAX(no_faktur) FROM transaction WHERE DATE(tgl) = CURRENT_DATE();`;
+  queryDatabase(sql)
+    .then((result) => {
       response(200, result, "Success fetch data", res);
       console.log("Data fetched successfully: ", sql);
     })

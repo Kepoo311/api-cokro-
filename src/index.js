@@ -18,6 +18,7 @@ const limiter = require("./middleware/limiter");
 app.use(bodyParser.json());
 app.use(limiter);
 app.use(validateKey);
+app.use(express.json());
 
 function queryDatabase(sql, params) {
   return new Promise((resolve, reject) => {
@@ -241,28 +242,51 @@ app.post("/set-data/pembayaran", async (req, res) => {
 });
 
 app.post("/set-data/transaksi_out", async (req, res) => {
-  const { no_faktur, kode, tgl, tgl_pelunasan, nama, qty, harga, subtotal, mark_up, laba, payment, namaPelanggan, Tunai, status, retur, debug } = req.body;
-  sql = "INSERT INTO transaction VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
-  body = [``, `${no_faktur}`, `${kode}`, `${tgl}`, `${tgl_pelunasan}`, `${nama}`, `${qty}`, `${harga}`, `${subtotal}`, `${mark_up}`, `${laba}`, `${payment}`, `${namaPelanggan}`, `${Tunai}`, `${status}`, `${retur}`, `${debug}`];
+  // Normalisasi input menjadi array
+  let transactions = Array.isArray(req.body) ? req.body : [req.body];
+  console.log("Transaksi masuk:", transactions); // Log data yang diterima
 
-  queryDatabase(sql, body)
-    .then((result) => {
-      data = {
-        isSucces: true,
-        Id: result.insertId,
-      };
-      response(200, data, "Succes insert data!", res);
-      console.log("Succes insert data : ", body);
-    })
-    .catch((eror) => {
-      data = {
-        isSucces: false,
-        error: eror.code,
-      };
+  let results = [];
 
-      response(404, data, "Error insert data!", res);
-      console.log("Error insert data : ", eror);
-    });
+  for (const transaction of transactions) {
+    const { no_faktur, kode, nama, qty, harga, subtotal, mark_up, laba, payment, Tunai, status, retur } = transaction;
+    console.log("Proses transaksi untuk:", no_faktur); // Log setiap transaksi yang diproses
+
+    const sql = "INSERT INTO transaction(no_faktur, kode, nama, qty, harga, subtotal, mark_up, laba, payment, Tunai, status, retur) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)";
+    const body = [no_faktur, kode, nama, qty, harga, subtotal, mark_up, laba, payment, Tunai, status, retur];
+
+    try {
+      const result = await queryDatabase(sql, body);
+      console.log("Insert result for", no_faktur, ":", result); // Log hasil query
+
+      if (result.affectedRows === 0) {
+        results.push({
+          no_faktur: no_faktur,
+          success: false,
+          message: "Tidak ada data yang diinsert."
+        });
+        console.log("No rows inserted for", no_faktur); // Log jika tidak ada baris yang terinsert
+      } else {
+        results.push({
+          no_faktur: no_faktur,
+          success: true,
+          rowsAffected: result.affectedRows
+        });
+      }
+    } catch (error) {
+      results.push({
+        no_faktur: no_faktur,
+        success: false,
+        error: error.code,
+        message: "Terjadi kesalahan saat memasukkan data."
+      });
+    }
+  }
+
+  // Pastikan untuk mengirim response hanya sekali
+  if (!res.headersSent) {
+    response(200, results, "Insert data!", res);
+  }
 });
 
 app.post("/set-data/transaksi_in", async (req, res) => {
@@ -290,28 +314,52 @@ app.post("/set-data/transaksi_in", async (req, res) => {
     });
 });
 
-app.put("/update-data/product/:kode/:qty", async (req, res) => {
-  sql = "UPDATE product SET keluar = keluar + ? WHERE kode_brg = ?";
-  params = [`${req.params.qty}`, `${req.params.kode}`];
+app.put("/update-data/product", async (req, res) => {
+  // Normalisasi input menjadi array
+  let updates = Array.isArray(req.body) ? req.body : [req.body];
+  console.log("Received updates:", updates); // Log data yang diterima
 
-  queryDatabase(sql, params)
-    .then((result) => {
-      data = {
-        isSucces: true,
-        rowsAffected: result.affectedRows,
-      };
+  let results = [];
 
-      response(200, data, "Succes update data!", res);
-      console.log("Succes update data : ", params);
-    })
-    .catch((eror) => {
-      data = {
-        isSucces: false,
-        error: eror.code,
-      };
-      response(404, data, "Error update data!", res);
-      console.log("Error update data : ", eror);
-    });
+  for (const update of updates) {
+    const { kode, qty } = update;
+    console.log("Processing update for:", kode, "with quantity:", qty); // Log setiap update yang diproses
+
+    const sql = "UPDATE product SET keluar = keluar + ? WHERE kode_brg = ?";
+    const body = [qty, kode];
+
+    try {
+      const result = await queryDatabase(sql, body);
+      console.log("Update result for", kode, ":", result); // Log hasil query
+
+      if (result.affectedRows === 0) {
+        results.push({
+          kode: kode,
+          success: false,
+          message: "Tidak ada data yang diupdate."
+        });
+        console.log("No rows updated for", kode); // Log jika tidak ada baris yang terupdate
+      } else {
+        results.push({
+          kode: kode,
+          success: true,
+          rowsAffected: result.affectedRows
+        });
+      }
+    } catch (error) {
+      results.push({
+        kode: kode,
+        success: false,
+        error: error.code,
+        message: "Terjadi kesalahan saat mengupdate data."
+      });
+    }
+  }
+
+  // Pastikan untuk mengirim response hanya sekali
+  if (!res.headersSent) {
+    response(200, results, "update data!", res);
+  }
 });
 
 cron.schedule("0 1 * * *", async () => {
@@ -382,8 +430,8 @@ app.listen(port, () => {
   console.log(`
 
  ██████╗ ██████╗ ██╗  ██╗██████╗  ██████╗      █████╗ ██████╗ ██╗    ██╗   ██╗ ██████╗ █████╗ 
-██╔════╝██╔═══██╗██║ ██╔╝██╔══██╗██╔═══██╗    ██╔══██╗██╔══██╗██║    ██║   ██║██╔════╝██╔══██╗
-██║     ██║   ██║█████╔╝ ██████╔╝██║   ██║    ███████║██████╔╝██║    ██║   ██║███████╗╚██████║
+██╔════╝██╔═══██╗██║ ██╔╝██╔══██╗██╔═══██╗    ██══██╗██╔══██╗██║    ██║   ██║██╔════╝██╔══██╗
+██║     ██║   ██║█████╔╝ ██████╔╝██║   █║    ███████║██████╔╝██║    ██║   ██║███████╗╚██████║
 ██║     ██║   ██║██╔═██╗ ██╔══██╗██║   ██║    ██╔══██║██╔═══╝ ██║    ╚██╗ ██╔╝██╔═══██╗╚═══██║
 ╚██████╗╚██████╔╝██║  ██╗██║  ██║╚██████╔╝    ██║  ██║██║     ██║     ╚████╔╝ ╚██████╔╝█████╔╝
  ╚═════╝ ╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝     ╚═╝  ╚═╝╚═╝     ╚═╝      ╚═══╝   ╚═════╝ ╚════╝ 

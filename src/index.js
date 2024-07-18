@@ -120,6 +120,27 @@ app.get("/get-data/products/:kode_barang", async (req, res) => {
     });
 });
 
+app.get("/get-data/products-t/:kode_barang", async (req, res) => {
+  const sql = `SELECT * FROM product WHERE kode_brg = ? OR kode_brg LIKE ?;`;
+
+  const kode_barang = req.params.kode_barang;
+  const kode_barang_last6 = kode_barang.slice(-6); // mengambil 6 karakter terakhir dari kode_barang
+
+  queryDatabase(sql, [kode_barang, `%${kode_barang_last6}`])
+    .then((result) => {
+      if (!result || result.length === 0) {
+        console.error("No data found : ", kode_barang);
+        return response(404, null, "No data found", res);
+      }
+
+      response(200, result, "Success fetch data", res);
+      console.log("Data fetched successfully: ", kode_barang);
+    })
+    .catch((error) => {
+      response(404, null, "Error fetching data", res);
+      console.error("Error fetching data: ", error);
+    });
+});
 
 app.get("/get-data/pembayaran", async (req, res) => {
   sql = "SELECT * FROM pembayaran";
